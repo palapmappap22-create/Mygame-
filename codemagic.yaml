@@ -1,0 +1,16 @@
+workflows:
+  unity-workflow:
+    name: Unity Build
+    instance_type: linux_x2
+    max_build_duration: 60
+    environment:
+      vars:
+        UNITY_VERSION: 2021.3.25f1
+    scripts:
+      - name: Activate Unity License
+        script: echo "Using Unity Version $UNITY_VERSION"
+      - name: Build project
+        script: |
+          /Applications/Unity/Hub/Editor/$UNITY_VERSION/Unity             -quit -batchmode -projectPath . -buildTarget Android -executeMethod BuildScript.Build
+    artifacts:
+      - build/**/*
