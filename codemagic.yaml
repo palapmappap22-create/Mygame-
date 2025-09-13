@@ -1,0 +1,65 @@
+workflows:
+  unity-android:
+    name: Build Unity Android (robust)
+    max_build_duration: 90
+    environment:
+      vars:
+        PROJECT_DIR: "Snake.Balest"
+    scripts:
+      - name: Prepare project
+        script: |
+          set -e
+          echo "🔹 Ensure project folder exists"
+          if [ -f "Snake.Balest.zip" ] && [ ! -d "$PROJECT_DIR" ]; then
+            echo "📦 Unzipping Snake.Balest.zip..."
+            unzip -o "Snake.Balest.zip" -d "$PROJECT_DIR" || true
+          fi
+          if [ ! -d "$PROJECT_DIR" ]; then
+            echo "❌ Project folder not found: $PROJECT_DIR"
+            ls -la
+            exit 1
+          fi
+          cd "$PROJECT_DIR"
+          ls -la
+
+      - name: Detect Unity and build
+        script: |
+          set -e
+          cd "$CM_BUILD_DIR/$PROJECT_DIR" || cd "$PROJECT_DIR" || true
+          echo "🔍 Looking for unity executables..."
+          UNITY_PATH=$(find /Applications/Unity/Hub/Editor -maxdepth 3 -type f -name 'Unity' 2>/dev/null | head -n 1 || true)
+          if [ -z "$UNITY_PATH" ]; then
+            UNITY_PATH=$(which unity-editor || which Unity || which unity || true)
+          fi
+          if [ -n "$UNITY_PATH" ]; then
+            echo "✅ Unity found at: $UNITY_PATH"
+          else
+            echo "⚠️ Unity not found on build machine. Build will likely fail."
+          fi
+
+          if [ -f "$CM_BUILD_DIR/unity-builder.sh" ]; then
+            echo "🔧 Running root unity-builder.sh..."
+            chmod +x "$CM_BUILD_DIR/unity-builder.sh"
+            "$CM_BUILD_DIR/unity-builder.sh" "$UNITY_PATH"
+          elif [ -f "./unity-builder.sh" ]; then
+            echo "🔧 Running project unity-builder.sh..."
+            chmod +x ./unity-builder.sh
+            ./unity-builder.sh "$UNITY_PATH"
+          else
+            echo "🔨 Attempt Unity build with detected path..."
+            if [ -n "$UNITY_PATH" ]; then
+              "$UNITY_PATH" -batchmode -nographics -quit -projectPath . -executeMethod BuildScript.BuildAndroid -logFile /dev/stdout || true
+            else
+              echo "❌ No Unity available to run the build."
+              exit 2
+            fi
+          fi
+
+      - name: Check APK
+        script: |
+          set -e
+          echo "🔎 Searching for APK..."
+          find . -type f -name "*.apk" -print || true
+    artifacts:
+      - '**/build/**/*.apk'
+      - '**/Builds/**/*.apk'
