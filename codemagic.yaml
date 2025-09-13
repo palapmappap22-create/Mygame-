@@ -1,0 +1,13 @@
+workflows:
+  unity_build:
+    name: Unity Build (APK)
+    environment:
+      vars:
+        UNITY_VERSION: latest
+    scripts:
+      - name: إعداد Unity وبناء المشروع
+        script: |
+          chmod +x ./unity-builder.sh
+          ./unity-builder.sh
+    artifacts:
+      - build/**/*.apk
